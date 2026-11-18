@@ -88,7 +88,7 @@
 
   function carrega(primer) {
     if (primer) pintaCarregant();
-    return api('estat').then(function (r) { E = r.estat; darreraCarrega = Date.now(); pinta(); }, function (e) {
+    return api('estat').then(function (r) { var y = window.scrollY; E = r.estat; darreraCarrega = Date.now(); pinta(); if (!primer) window.scrollTo(0, y); }, function (e) {
       if (/Enllaç no vàlid/.test(e.message)) return pintaSenseClau(true);
       if (primer || !E) { pintaError(e.message); } else mostraAvis('No s\'ha pogut actualitzar. ' + e.message + '.');
     });
@@ -173,11 +173,10 @@
   }
 
   function escena() {
+    // Un sol dibuix (escena.svg): Girona amb la llum radial i la furgoneta que bota, amb les proporcions de l'Albert.
     var s = el('div', 'escena');
-    var sil = el('img', 'silueta'); sil.src = 'silueta.svg'; sil.alt = '';
-    var llum = el('div', 'llum');
-    var fu = el('img', 'furgo'); fu.src = 'furgoneta.svg'; fu.alt = '';
-    s.appendChild(sil); s.appendChild(llum); s.appendChild(fu);
+    var im = el('img'); im.src = 'escena.svg?v=3'; im.alt = '';
+    s.appendChild(im);
     return s;
   }
 
@@ -619,6 +618,13 @@
     if (avuiMobil() !== E.avui || Date.now() - darreraCarrega > 5 * 60000) carrega();
   });
   window.addEventListener('resize', function () { setTimeout(ajustaNoms, 50); });
+  // Cada 2 minuts, si l'app és a la vista i no s'està fent res, es demanen les dades noves a Google
+  // (així es veuen les faltes que marquen l'oficina o l'altre conductor).
+  setInterval(function () {
+    if (document.hidden || !E || ocupat || enviant) return;
+    if (document.getElementById('capa').classList.contains('oberta') || document.getElementById('dialeg').classList.contains('obert')) return;
+    carrega();
+  }, 2 * 60000);
   // Si s'obre un enllaç amb clau mentre l'app ja és oberta.
   window.addEventListener('hashchange', function () {
     var k = clauDe(location.hash);
