@@ -25,8 +25,11 @@
   // L'enllaç és https://app.elsa.cat/#k=CLAU: el que va després de # no s'envia mai a cap servidor.
   function clauDe(text) { var m = String(text || '').match(/[#?&]k=([0-9a-f]{32})/); return m ? m[1] : ''; }
   function desaClau(k) { try { localStorage.setItem('elsa_clau', k); } catch (e) { /* sense memòria */ } }
-  var clau = clauDe(location.hash) || clauDe(location.search);
-  if (clau) { desaClau(clau); history.replaceState(null, '', location.pathname); }
+  // Banc de proves (prototip.html): no fa servir cap clau ni parla amb Google.
+  var PROTOTIP = window.ELSA_PROTOTIP || null;
+  var clau = PROTOTIP ? 'prototip' : clauDe(location.hash) || clauDe(location.search);
+  if (PROTOTIP) { /* res */ }
+  else if (clau) { desaClau(clau); history.replaceState(null, '', location.pathname); }
   else { try { clau = localStorage.getItem('elsa_clau') || ''; } catch (e) { clau = ''; } }
 
   if ('serviceWorker' in navigator) { try { navigator.serviceWorker.register('sw.js'); } catch (e) { /* res */ } }
@@ -68,6 +71,7 @@
 
   // ───────── Parlar amb Google ─────────
   function api(op, args) {
+    if (PROTOTIP) return PROTOTIP.api(op, args);   // banc de proves: no surt res del mòbil
     var ctrl = window.AbortController ? new AbortController() : null;
     var t = setTimeout(function () { if (ctrl) ctrl.abort(); }, 40000);
     return fetch(API, {
@@ -168,13 +172,26 @@
     var bm = boto('boto-menu', obreMenu); bm.setAttribute('aria-label', 'Menú');
     bm.appendChild(el('span')); bm.appendChild(el('span')); bm.appendChild(el('span'));
     t.appendChild(bm);
-    t.appendChild(el('span', null, 'Associació Elsa'));
+    var nomApp = el('span', null, 'Associació Elsa');
+    if (PROTOTIP) nomApp.addEventListener('click', tresTocs);
+    t.appendChild(nomApp);
     c.appendChild(t);
     var f = el('div', 'fila');
     f.appendChild(el('div', 'nom-cond', nom));
     f.appendChild(el('div', 'data', data));
     c.appendChild(f);
     return c;
+  }
+
+  // Banc de proves: tres tocs seguits a «Associació Elsa» tornen a començar (ruta nova, sense fitxatges).
+  var tocs = [];
+  function tresTocs() {
+    var ara = Date.now();
+    tocs = tocs.filter(function (t) { return ara - t < 1200; }).concat(ara);
+    if (tocs.length < 3 || ocupat) return;
+    tocs = [];
+    PROTOTIP.reinicia(); vista.bloc = ''; enviant = false; tanca(); tancaMenu();
+    vibra(60); carrega(true);
   }
 
   function escena() {
@@ -748,6 +765,7 @@
   }, 2 * 60000);
   // Si s'obre un enllaç amb clau mentre l'app ja és oberta.
   window.addEventListener('hashchange', function () {
+    if (PROTOTIP) return;
     var k = clauDe(location.hash);
     if (!k) return;
     clau = k; desaClau(k); history.replaceState(null, '', location.pathname); carrega(true);
