@@ -164,7 +164,12 @@
 
   function capcalera(nom, data) {
     var c = el('div', 'cap');
-    c.appendChild(el('div', 'titol-app', 'Associació Elsa'));
+    var t = el('div', 'titol-app');
+    var bm = boto('boto-menu', obreMenu); bm.setAttribute('aria-label', 'Menú');
+    bm.appendChild(el('span')); bm.appendChild(el('span')); bm.appendChild(el('span'));
+    t.appendChild(bm);
+    t.appendChild(el('span', null, 'Associació Elsa'));
+    c.appendChild(t);
     var f = el('div', 'fila');
     f.appendChild(el('div', 'nom-cond', nom));
     f.appendChild(el('div', 'data', data));
@@ -260,9 +265,20 @@
       ep.appendChild(el('span', null, durada(Math.max(0, araMin() - j.pausaDes))));
       c.appendChild(ep);
     }
-    if (j.acabada) c.appendChild(el('div', 'acabada', 'Jornada acabada. Gràcies!'));
     var ultim = E.jornada.fets[E.jornada.fets.length - 1];
-    if (ultim && ultim.potDesfer && !enviant) {
+    if (j.acabada) {
+      c.appendChild(el('div', 'acabada', 'Jornada acabada. Gràcies!'));
+      if (ultim && ultim.tipus === 'Sortida' && ultim.potDesfer && !enviant) {
+        // Botó gran per si ha tocat "acabar" per error (durant els primers 10 minuts).
+        c.appendChild(boto('boto-repren', function () {
+          pregunta('Vols desfer el final de la jornada i continuar treballant?', 'Sí, continuo', 'No').then(function (si) {
+            if (si) fes('desfesFitxatge', []).catch(function () { /* ja avisat */ });
+          });
+        }, '↶ M\'he equivocat: continuo treballant'));
+      } else if (ultim && ultim.tipus === 'Sortida') {
+        c.appendChild(el('div', 'acabada', 'Si t\'has equivocat, avisa l\'oficina perquè ho corregeixi.'));
+      }
+    } else if (ultim && ultim.potDesfer && !enviant) {
       c.appendChild(boto('desfes', function () {
         pregunta('Vols desfer «' + ultim.tipus + ' ' + ultim.hora + '»?', 'Desfés', 'No').then(function (si) {
           if (si) fes('desfesFitxatge', []).catch(function () { /* ja avisat */ });
@@ -272,7 +288,6 @@
     c.appendChild(liniaDia(j.trams));
     app.appendChild(c);
     app.appendChild(fullRuta());
-    app.appendChild(navBaix());
     if (j.treballant || j.enPausa) rellotge = setInterval(function () {
       var obert = document.getElementById('capa').classList.contains('oberta') || document.getElementById('dialeg').classList.contains('obert');
       if (!obert && !ocupat) { var y = window.scrollY; pinta(); window.scrollTo(0, y); }
@@ -284,12 +299,18 @@
     var w = el('div');
     var l = el('div', 'linia-dia');
     var tot = LINIA_FI - LINIA_INICI;
-    trams.forEach(function (t) {
-      var de = Math.max(LINIA_INICI, t.de), a = Math.min(LINIA_FI, t.a);
-      if (a <= de) return;
+    var peces = trams.map(function (t) { return { de: Math.max(LINIA_INICI, t.de), a: Math.min(LINIA_FI, t.a), pausa: t.pausa }; })
+      .filter(function (t) { return t.a > t.de; })
+      .sort(function (x, y) { return x.de - y.de; });
+    peces.forEach(function (t, k) {
       var i = el('i', t.pausa ? 'tram-pausa' : '');
-      i.style.left = ((de - LINIA_INICI) / tot * 100) + '%';
-      i.style.width = ((a - de) / tot * 100) + '%';
+      i.style.left = ((t.de - LINIA_INICI) / tot * 100) + '%';
+      i.style.width = ((t.a - t.de) / tot * 100) + '%';
+      // Puntes arrodonides; on un tram toca el següent (feina → pausa → feina), la unió és recta.
+      var ambAnterior = k > 0 && peces[k - 1].a >= t.de;
+      var ambSeguent = k < peces.length - 1 && peces[k + 1].de <= t.a;
+      i.style.borderRadius = (ambAnterior ? '0' : '4px') + ' ' + (ambSeguent ? '0' : '4px') + ' ' +
+        (ambSeguent ? '0' : '4px') + ' ' + (ambAnterior ? '0' : '4px');
       l.appendChild(i);
     });
     w.appendChild(l);
@@ -299,13 +320,21 @@
     return w;
   }
 
-  function navBaix() {
-    var n = el('div', 'nav');
-    n.appendChild(boto('act', function () {}, 'Ruta'));
-    var z = boto('off', function () { mostraAvis('La Zona del treballador arribarà més endavant.'); }, 'Zona');
-    n.appendChild(z);
-    return n;
+  // Menú lateral (s'obre amb el botó ☰). De moment només avisa que hi haurà la Zona del treballador.
+  function obreMenu() {
+    var m = document.getElementById('menu');
+    if (!m) {
+      m = el('div', 'menu'); m.id = 'menu';
+      var cortina = el('div', 'menu-fons'); cortina.addEventListener('click', tancaMenu);
+      var caixa = el('div', 'menu-caixa');
+      caixa.appendChild(el('div', 'menu-titol', 'Associació Elsa'));
+      caixa.appendChild(el('div', 'menu-buit', 'Aviat hi trobaràs la Zona del treballador.'));
+      m.appendChild(cortina); m.appendChild(caixa);
+      document.body.appendChild(m);
+    }
+    requestAnimationFrame(function () { m.classList.add('obert'); });
   }
+  function tancaMenu() { var m = document.getElementById('menu'); if (m) m.classList.remove('obert'); }
 
   // ───────── Ruta (pestanyes MATÍ / MIGDIA / TARDA) ─────────
   function blocPerDefecte(compte) {
@@ -367,6 +396,7 @@
     if (meves.length) et.appendChild(el('span', 'etiq no', textFaltaCurt(meves[0])));
     if (p.nou) et.appendChild(el('span', 'etiq nou', 'NOU'));
     if (p.cadira) et.appendChild(el('span', 'etiq cadira', 'CADIRA'));
+    if (p.aniversari) et.appendChild(el('span', 'etiq pastis', '🎂'));
     if (et.children.length) d.appendChild(et);
     d.addEventListener('click', function () { obrePanell(p); });
     return d;
@@ -464,8 +494,20 @@
         }, 'Torna a venir'));
       }
     });
-    var tots = p.faltes.some(function (f) { return f.trajecte === 'Tot el dia'; });
-    if (!tots && p.faltes.length < 2) formulari(pa, p);
+    // Faltes ja marcades per als pròxims dies (es poden anul·lar).
+    (p.futures || []).forEach(function (f) {
+      var c = el('div', 'falta-ja', 'El ' + diaSetmana(f.dia).toLowerCase() + ': ' + (f.trajecte === 'Tot el dia' ? 'no ve' : 'no fa la ' + f.trajecte.toLowerCase()));
+      c.appendChild(el('small', null, 'Motiu: ' + f.motiu + (f.marcatPer ? ' · Marcat per ' + nomBonic(f.marcatPer) : '')));
+      pa.appendChild(c);
+      pa.appendChild(boto('gran vora', function () {
+        pregunta('Vols anul·lar aquesta falta del ' + diaSetmana(f.dia).toLowerCase() + '?', 'Anul·la', 'No').then(function (si) {
+          if (!si) return;
+          tanca();
+          fes('anullaFalta', [f.id]).catch(function () {});
+        });
+      }, 'Anul·la la del ' + curta(f.dia)));
+    });
+    formulari(pa, p);
     pa.appendChild(boto('gran gris', tanca, 'Tanca'));
     document.getElementById('capa').classList.add('oberta');
   }
@@ -476,44 +518,77 @@
     return f.trajecte === 'Tot el dia' ? 'No ve' : 'No fa la ' + f.trajecte.toLowerCase();
   }
 
+  // Com es mostren a la pantalla els valors que es guarden al full.
+  var TEXT_TRAJECTE = { 'Tot el dia': 'Cap', 'Anada': 'Anada', 'Tornada': 'Tornada' };
+
+  // El pròxim dia feiner (de dilluns a divendres) després d'una data. Es pot canviar a mà.
+  function proximFeiner(iso) {
+    var d = isoMes(iso, 1);
+    while ([0, 6].indexOf(new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10), 12).getDay()) >= 0) d = isoMes(d, 1);
+    return d;
+  }
+
   function formulari(pa, p) {
-    var ja = p.faltes.map(function (f) { return f.trajecte; });
-    var trajectes = E.trajectes.filter(function (t) { return ja.length ? (t !== 'Tot el dia' && ja.indexOf(t) < 0) : true; });
-    var tria = { trajecte: trajectes[0], motiu: '', tipus: E.tipusFalta[0] };
+    var trajectes = E.trajectes;
+    var esAvui = E.data === E.avui;
+    // "Quin dia?": aquest dia, el pròxim dia (un sol dia més endavant), fins a una data o fins a nou avís.
+    var DIES_OPC = [
+      { valor: 'avui', text: esAvui ? 'Avui' : 'Aquest dia' },
+      { valor: 'proxim', text: 'El pròxim dia' },
+      { valor: 'Fins a una data', text: 'Fins a una data' },
+      { valor: 'Fins a nou avís', text: 'Fins a nou avís' },
+    ];
+    var tria = { trajecte: trajectes[0], motiu: '', quan: 'avui' };
     function xips(titol, opcions, camp, despres) {
       pa.appendChild(el('h4', null, titol));
       var g = el('div', 'xips');
       opcions.forEach(function (o) {
-        g.appendChild(boto('xip' + (tria[camp] === o ? ' si' : ''), function () {
-          tria[camp] = o;
-          g.querySelectorAll('.xip').forEach(function (x) { x.className = 'xip' + (x.textContent === o ? ' si' : ''); });
+        var valor = typeof o === 'string' ? o : o.valor, text = typeof o === 'string' ? o : o.text;
+        var b = boto('xip' + (tria[camp] === valor ? ' si' : ''), function () {
+          tria[camp] = valor;
+          g.querySelectorAll('.xip').forEach(function (x) { x.className = 'xip' + (x === b ? ' si' : ''); });
           if (despres) despres();
-        }, o));
+        }, text);
+        g.appendChild(b);
       });
       pa.appendChild(g);
     }
-    xips('Quin trajecte no fa?', trajectes, 'trajecte');
+    xips('Quin trajecte no fa?', trajectes.map(function (t) { return { valor: t, text: TEXT_TRAJECTE[t] || t }; }), 'trajecte');
     var altresCaixa = el('div'); altresCaixa.style.display = 'none';
     xips('Motiu', E.motius, 'motiu', function () { altresCaixa.style.display = tria.motiu === E.motiuAmbText ? 'block' : 'none'; });
     altresCaixa.appendChild(el('div', 'avis-salut', 'Escriu-ho molt breu. NO hi escriguis res de salut.'));
     var altres = el('input', 'camp'); altres.maxLength = E.maxText; altres.placeholder = 'Motiu (curt)';
     altresCaixa.appendChild(altres);
     pa.appendChild(altresCaixa);
+
+    var proximCaixa = el('div'); proximCaixa.style.display = 'none';
+    proximCaixa.appendChild(el('h4', null, 'Quin dia no vindrà'));
+    var proxim = el('input', 'camp'); proxim.type = 'date'; proxim.value = proximFeiner(E.data); proxim.min = isoMes(E.data, 1); proxim.max = isoMes(E.data, 60);
+    proximCaixa.appendChild(proxim);
     var dataCaixa = el('div'); dataCaixa.style.display = 'none';
-    xips('Fins quan?', E.tipusFalta, 'tipus', function () { dataCaixa.style.display = tria.tipus === 'Fins a una data' ? 'block' : 'none'; });
     dataCaixa.appendChild(el('h4', null, 'Últim dia que no vindrà'));
     var fins = el('input', 'camp'); fins.type = 'date'; fins.value = E.data;
     dataCaixa.appendChild(fins);
+    xips('Quin dia?', DIES_OPC, 'quan', function () {
+      proximCaixa.style.display = tria.quan === 'proxim' ? 'block' : 'none';
+      dataCaixa.style.display = tria.quan === 'Fins a una data' ? 'block' : 'none';
+    });
+    pa.appendChild(proximCaixa);
     pa.appendChild(dataCaixa);
+
     pa.appendChild(boto('gran blau', function () {
       if (!tria.motiu) return mostraAvis('Tria un motiu.');
       if (tria.motiu === E.motiuAmbText && !altres.value.trim()) return mostraAvis('Escriu breument el motiu.');
-      var f = { data: E.data, soci: p.soci, nom: p.nom, trajecte: tria.trajecte, tipus: tria.tipus,
+      if (tria.quan === 'proxim' && !(proxim.value > E.data)) return mostraAvis('Tria un dia posterior.');
+      var unDia = tria.quan === 'avui' || tria.quan === 'proxim';
+      var f = { data: E.data, dia: tria.quan === 'proxim' ? proxim.value : '', soci: p.soci, nom: p.nom,
+        trajecte: tria.trajecte, tipus: unDia ? 'Només aquest dia' : tria.quan,
         finsAl: fins.value, motiu: tria.motiu, altres: altres.value };
       vibra(40);
       pintaGuardant(p);
       fes('marcaFalta', [f, E.conductor], function () {
-        p.faltes.push({ id: 'provisional', provisional: true, trajecte: f.trajecte, tipus: f.tipus, finsAl: f.finsAl, motiu: f.motiu });
+        // Si és per a un altre dia, avui no canvia res a la ruta: no es pinta cap "NO" provisional.
+        if (!f.dia) p.faltes.push({ id: 'provisional', provisional: true, trajecte: f.trajecte, tipus: f.tipus, finsAl: f.finsAl, motiu: f.motiu });
       }).then(function (res) { pintaDesat(p, res.whatsapp); }, function () { tanca(); });
     }, 'Desa la falta'));
   }
