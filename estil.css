@@ -137,7 +137,7 @@ button:disabled { opacity: .5; }
 /* ───────── Panell (marcar una falta) ───────── */
 .capa { position: fixed; inset: 0; background: rgba(0,0,30,.55); display: none; align-items: flex-end; z-index: 20; }
 .capa.oberta { display: flex; }
-.panell { background: #fff; color: var(--text); width: 100%; max-height: 92vh; overflow-y: auto; border-radius: 22px 22px 0 0;
+.panell { overflow-x: hidden; background: #fff; color: var(--text); width: 100%; max-height: 92vh; overflow-y: auto; border-radius: 22px 22px 0 0;
   padding: 20px 18px calc(env(safe-area-inset-bottom) + 22px); }
 .panell h3 { font-size: 22px; font-weight: 700; }
 .panell .sub { color: var(--gris); font-weight: 700; font-size: 13px; margin-bottom: 8px; }
@@ -146,6 +146,9 @@ button:disabled { opacity: .5; }
 .xip { padding: 11px 14px; border-radius: 10px; background: var(--full); font-weight: 700; font-size: 15px; color: var(--text); }
 .xip.si { background: var(--fosc2); color: #fff; }
 .camp { width: 100%; font-size: 17px; padding: 12px; border: 1.5px solid #c9c9d6; border-radius: 10px; margin-top: 8px; color: var(--text); background: #fff; }
+/* La casella de data de l'iPhone/Android té una amplada pròpia que sortia de la pantalla. */
+input.camp[type=date] { display: block; max-width: 100%; min-width: 0; -webkit-appearance: none; appearance: none; text-align: left; min-height: 48px; }
+input.camp[type=date]::-webkit-date-and-time-value { text-align: left; }
 .avis-salut { background: #fff6c9; border-radius: 8px; padding: 8px 10px; font-size: 13px; font-weight: 500; margin-top: 8px; }
 .gran { display: block; width: 100%; padding: 15px; border-radius: 12px; font-size: 17px; font-weight: 700; margin-top: 18px; text-align: center; text-decoration: none; }
 .gran.blau { background: var(--fosc2); color: #fff; }
