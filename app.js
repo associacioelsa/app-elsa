@@ -286,6 +286,7 @@
       }, '↶ M\'he equivocat: desfés «' + ultim.tipus + '»'));
     }
     c.appendChild(liniaDia(j.trams));
+    c.appendChild(boto('meus', obreMeusFitxatges, 'Els meus fitxatges ›'));
     app.appendChild(c);
     app.appendChild(fullRuta());
     if (j.treballant || j.enPausa) rellotge = setInterval(function () {
@@ -328,12 +329,57 @@
       var cortina = el('div', 'menu-fons'); cortina.addEventListener('click', tancaMenu);
       var caixa = el('div', 'menu-caixa');
       caixa.appendChild(el('div', 'menu-titol', 'Associació Elsa'));
+      if (E && E.qui.rol === 'Conductor') caixa.appendChild(boto('menu-opcio', function () { tancaMenu(); obreMeusFitxatges(); }, 'Els meus fitxatges'));
       caixa.appendChild(el('div', 'menu-buit', 'Aviat hi trobaràs la Zona del treballador.'));
       m.appendChild(cortina); m.appendChild(caixa);
       document.body.appendChild(m);
     }
     requestAnimationFrame(function () { m.classList.add('obert'); });
   }
+  // Els fitxatges d'avui i dels últims dies, amb "Canvia l'hora" (queda constància del canvi i del comentari).
+  function obreMeusFitxatges() {
+    var pa = document.getElementById('panell'); pa.innerHTML = '';
+    pa.appendChild(el('h3', null, 'Els meus fitxatges'));
+    pa.appendChild(el('div', 'sub', 'Si t\'has equivocat, toca «Canvia l\'hora». Pots corregir fins a ' + (E.diesCorregir || 7) + ' dies enrere.'));
+    var dies = [{ data: E.avui, fets: E.jornada.fets.filter(function (f) { return f.id !== 'provisional'; }) }].concat(E.recents || []);
+    dies.forEach(function (d) {
+      if (!d.fets.length) return;
+      pa.appendChild(el('h4', null, d.data === E.avui ? 'Avui' : diaSetmana(d.data)));
+      d.fets.forEach(function (f) {
+        if (f.tipus === 'No treballa') return;
+        var fila = el('div', 'fitx');
+        var t = el('div', 'fitx-text');
+        t.appendChild(el('b', null, f.hora + '  '));
+        t.appendChild(el('span', null, f.tipus));
+        if (f.modificat) t.appendChild(el('small', null, ' · modificat'));
+        if (f.comentari) t.appendChild(el('div', 'fitx-com', f.comentari));
+        fila.appendChild(t);
+        if (/oficina/i.test(f.origen || '')) fila.appendChild(el('small', null, 'Corregit per l\'oficina'));
+        else fila.appendChild(boto('petit', function () { canviaHora(d.data, f); }, 'Canvia l\'hora'));
+        pa.appendChild(fila);
+      });
+    });
+    pa.appendChild(boto('gran gris', tanca, 'Tanca'));
+    document.getElementById('capa').classList.add('oberta');
+  }
+
+  function canviaHora(data, f) {
+    var d = document.getElementById('dialeg'), c = document.getElementById('caixa');
+    c.innerHTML = '';
+    c.appendChild(el('p', null, '«' + f.tipus + '» del ' + diaSetmana(data).toLowerCase() + '.\nQuina és l\'hora correcta?'));
+    var i = el('input', 'camp'); i.type = 'time'; i.value = f.hora; c.appendChild(i);
+    var com = el('input', 'camp'); com.placeholder = 'Comentari (opcional, res de salut)'; com.maxLength = 160; c.appendChild(com);
+    var bs = el('div', 'botons2');
+    bs.appendChild(boto('no', function () { d.classList.remove('obert'); }, 'Cancel·la'));
+    bs.appendChild(boto('si', function () {
+      if (!i.value) return mostraAvis('Posa l\'hora.');
+      d.classList.remove('obert'); tanca();
+      fes('corregeixFitxatge', ['', data, f.id, i.value, com.value]).then(function () { mostraAvis('Fet. Hora canviada.'); }, function () {});
+    }, 'Desa'));
+    c.appendChild(bs);
+    d.classList.add('obert');
+  }
+
   function tancaMenu() { var m = document.getElementById('menu'); if (m) m.classList.remove('obert'); }
 
   // ───────── Ruta (pestanyes MATÍ / MIGDIA / TARDA) ─────────

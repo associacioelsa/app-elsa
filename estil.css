@@ -187,3 +187,11 @@ input.camp[type=date]::-webkit-date-and-time-value { text-align: left; }
 .petit.blau { background: var(--fosc2); color: #fff; }
 
 .sense-clau { padding: 120px 30px; text-align: center; font-size: 19px; font-weight: 500; line-height: 1.4; }
+
+/* Els meus fitxatges */
+.meus { display: block; margin: 12px 0 0 auto; color: #b9b9e0; font-size: 14px; font-weight: 500; }
+.menu-opcio { display: block; width: 100%; text-align: left; padding: 14px 0; font-size: 17px; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,.12); margin-bottom: 14px; }
+.fitx { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--linia); }
+.fitx-text { font-size: 16px; }
+.fitx-text small { color: var(--gris); }
+.fitx-com { font-size: 13px; color: var(--gris); margin-top: 2px; }
