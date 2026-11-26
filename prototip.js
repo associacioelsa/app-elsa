@@ -11,10 +11,14 @@
   // Usuaris inventats (nom + primer cognom, com a la ruta). N'hi ha de llargs per veure com hi caben.
   var NOMS = ['MARIA PUIG', 'JOAN FERRER', 'MONTSERRAT VILA', 'JOSEP SOLER', 'CARME ROCA', 'PERE CASAS',
     'ROSA FONT', 'ANTONI SERRA', 'TERESA PRAT', 'FRANCESC BOSCH', 'NÚRIA COSTA', 'JAUME RIBAS',
-    'DOLORS MAS', 'LLUÍS PONS', 'ENGRÀCIA COMAS', 'RAMON VIDAL'];
+    'DOLORS MAS', 'LLUÍS PONS', 'ENGRÀCIA COMAS', 'RAMON VIDAL', 'PILAR GARCIA', 'MIQUEL TORRES',
+    'ANNA SALA', 'ENRIC MOLINA', 'CONXITA BATLLE', 'JORDI PAGÈS', 'MERCÈ RIERA', 'AGUSTÍ ROVIRA',
+    'ISABEL MARTÍ', 'XAVIER CODINA', 'GLÒRIA FORNS', 'SALVADOR PLA', 'MARGARIDA COLL', 'VICENÇ GIRALT',
+    'LOURDES SABATER', 'ALBERT OLIVA', 'ROSER BALLESTER', 'MANEL ESTEVE', 'EULÀLIA NADAL', 'BLAI ARNAU',
+    'FINA CAMPS', 'TOMÀS GASULL'];
   var NOMS_LLARGS = ['MARIA DEL CARME FONTANILLES', 'JOSEP MARIA CASTELLVÍ-PUIGDEMASA', 'MARIA DELS ÀNGELS BARCELONETA',
     'FRANCESC XAVIER VILADECAVALLS'];
-  var CENTRES = ['LES ROSES', 'EL ROURE', 'SANT NARCÍS'];
+  var CENTRES = ['LES ROSES', 'EL ROURE', 'SANT NARCÍS', 'LA MIMOSA'];
   var MOTIUS = ['Visita mèdica', 'S\'ha dormit', 'Assumptes personals', 'No ha volgut', 'No ho sabem', 'Altres'];
   var DIES = ['diumenge', 'dilluns', 'dimarts', 'dimecres', 'dijous', 'divendres', 'dissabte'];
 
@@ -35,39 +39,51 @@
   function curta(i) { return i.slice(8, 10) + '/' + i.slice(5, 7); }
   function nouId() { return 'p' + (seguent++); }
 
-  // Una ruta nova a l'atzar: MATÍ (anades), MIGDIA (tornades i anades), TARDA (tornades).
+  // Una ruta nova a l'atzar, com la real: MATÍ 14–18 usuaris (anades), MIGDIA 4–8 (tornades dels que només
+  // fan matí i anades dels que només fan tarda) i TARDA 14–18 (tornades). Els centres van entremig.
+  function entre(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
   function rutaNova() {
-    var persones = remena(NOMS).slice(0, 12).map(function (n, k) {
-      return { soci: String(2001 + k), nom: n, centre: CENTRES[k % CENTRES.length], nou: atzar(0.1), cadira: atzar(0.2), aniversari: false };
+    var persones = remena(NOMS).map(function (n, k) {
+      return { soci: String(2001 + k), nom: n, centre: CENTRES[k % CENTRES.length], nou: false, cadira: false, aniversari: false };
     });
-    // Sempre hi ha d'haver almenys un NOU i una CADIRA.
-    if (!persones.some(function (p) { return p.nou; })) persones[3].nou = true;
-    if (!persones.some(function (p) { return p.cadira; })) persones[6].cadira = true;
+    var nMati = entre(14, 18), nMigdia = entre(4, 8), nTarda = entre(14, 18);
+    var nTornenMigdia = Math.min(nMigdia - 1, entre(2, 4)), nVenenMigdia = nMigdia - nTornenMigdia;
+    var mati = persones.slice(0, nMati);
+    var tornenMigdia = mati.slice(0, nTornenMigdia);                         // només fan el matí
+    var venenMigdia = persones.slice(nMati, nMati + nVenenMigdia);            // només fan la tarda
+    var tarda = mati.slice(nTornenMigdia).concat(venenMigdia).slice(0, nTarda);
+    // Si no n'hi ha prou, s'hi afegeixen persones que només tornen a la tarda.
+    var extres = persones.slice(nMati + nVenenMigdia, nMati + nVenenMigdia + Math.max(0, nTarda - tarda.length));
+    tarda = tarda.concat(extres);
+    var surten = mati.concat(venenMigdia, extres);
+    // Sempre hi ha d'haver algun NOU i alguna CADIRA (de vegades més d'un).
+    remena(surten).slice(0, entre(1, 2)).forEach(function (p) { p.nou = true; });
+    remena(surten).slice(0, entre(2, 4)).forEach(function (p) { p.cadira = true; });
     // Un o dos aniversaris.
-    remena(persones).slice(0, atzar(0.5) ? 1 : 2).forEach(function (p) { p.aniversari = true; });
+    var anys = remena(surten).slice(0, entre(1, 2));
+    anys.forEach(function (p) { p.aniversari = true; });
     // De tant en tant (1 de cada 3), el cas difícil: nom llarg + NOU + CADIRA + 🎂.
     if (atzar(1 / 3)) {
-      var q = persones.filter(function (p) { return p.aniversari; })[0];   // un dels que ja fan anys (així n'hi ha 1 o 2)
-      q.nom = NOMS_LLARGS[Math.floor(Math.random() * NOMS_LLARGS.length)];
-      q.nou = q.cadira = q.aniversari = true;
+      anys[0].nom = NOMS_LLARGS[Math.floor(Math.random() * NOMS_LLARGS.length)];
+      anys[0].nou = anys[0].cadira = true;
     }
     var ruta = [];
-    function parada(bloc, hora, p, trajecte) {
-      ruta.push({ bloc: bloc, hora: hora, tipus: 'Usuari', soci: p.soci, nom: p.nom, centre: p.centre, trajecte: trajecte,
-        faltes: [], futures: [], nou: p.nou, cadira: p.cadira, aniversari: p.aniversari });
+    function hh(m) { return dosX(Math.floor(m / 60)) + ':' + dosX(m % 60); }
+    function bloc(nomBloc, inici, llista, trajecte) {
+      var h = inici;
+      llista.forEach(function (p, k) {
+        if (k && k % 5 === 0) { ruta.push({ bloc: nomBloc, hora: hh(h), tipus: 'Centre', nom: CENTRES[(k / 5) % CENTRES.length], faltes: [] }); h += 10; }
+        ruta.push({ bloc: nomBloc, hora: hh(h), tipus: 'Usuari', soci: p.soci, nom: p.nom, centre: p.centre, trajecte: trajecte,
+          faltes: [], futures: [], nou: p.nou, cadira: p.cadira, aniversari: p.aniversari });
+        h += 8;
+      });
+      ruta.push({ bloc: nomBloc, hora: hh(h), tipus: 'Centre', nom: CENTRES[entre(0, CENTRES.length - 1)], faltes: [] });
     }
-    function centre(bloc, hora, nom) { ruta.push({ bloc: bloc, hora: hora, tipus: 'Centre', nom: nom, faltes: [] }); }
-    var mati = persones.slice(0, 8), tarda = persones.slice(4, 12);
-    var h = 8 * 60;
-    mati.forEach(function (p, k) { parada('MATÍ', dosX(Math.floor(h / 60)) + ':' + dosX(h % 60), p, 'Anada'); h += 10; if (k === 3) { centre('MATÍ', dosX(Math.floor(h / 60)) + ':' + dosX(h % 60), CENTRES[0]); h += 10; } });
-    centre('MATÍ', dosX(Math.floor(h / 60)) + ':' + dosX(h % 60), CENTRES[1]);
-    parada('MIGDIA', '13:00', persones[0], 'Tornada');
-    parada('MIGDIA', '13:15', persones[1], 'Tornada');
-    centre('MIGDIA', '13:40', CENTRES[2]);
-    parada('MIGDIA', '14:00', persones[10], 'Anada');
-    parada('MIGDIA', '14:20', persones[11], 'Anada');
-    h = 17 * 60;
-    tarda.forEach(function (p, k) { if (k === 0) { centre('TARDA', '16:50', CENTRES[1]); } parada('TARDA', dosX(Math.floor(h / 60)) + ':' + dosX(h % 60), p, 'Tornada'); h += 10; });
+    bloc('MATÍ', 7 * 60 + 40, remena(mati), 'Anada');
+    bloc('MIGDIA', 12 * 60 + 45, tornenMigdia.concat(venenMigdia).map(function (p) { return p; }), null);
+    bloc('TARDA', 16 * 60 + 40, remena(tarda), 'Tornada');
+    // Al migdia, els del matí tornen i els de la tarda van.
+    ruta.forEach(function (r) { if (r.bloc === 'MIGDIA' && r.tipus === 'Usuari') r.trajecte = tornenMigdia.some(function (p) { return p.soci === r.soci; }) ? 'Tornada' : 'Anada'; });
     return ruta;
   }
 

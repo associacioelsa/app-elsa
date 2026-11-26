@@ -22,6 +22,9 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overscroll-behavior-y: none; }
+/* Fons fosc també darrere la barra de baix de l'iPhone (si no, hi surt una franja blanca)
+   i sense el moviment de "zoom" en tocar dos cops seguits. */
+html { background: var(--fosc2); touch-action: manipulation; }
 body {
   font-family: 'Satoshi', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
   background: linear-gradient(180deg, var(--fosc) 0%, var(--fosc2) 100%) fixed;
