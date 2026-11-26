@@ -144,8 +144,8 @@
     if (iniciPausa !== null && ultim === 'Inici pausa') trams.push({ de: iniciPausa, a: ara, pausa: true });
     var possibles = noTreballa ? [] : !ultim ? ['Entrada'] : (ultim === 'Entrada' || ultim === 'Fi pausa') ? ['Inici pausa', 'Sortida'] : ultim === 'Inici pausa' ? ['Fi pausa'] : [];
     var hora8h = '';
-    if (obert !== null && !noTreballa && tancat < E.horesJornada * 60) {
-      var m8 = obert + E.horesJornada * 60 - tancat;
+    if (obert !== null && !noTreballa && tancat < E.minutsJornada) {
+      var m8 = obert + E.minutsJornada - tancat;
       if (m8 <= 23 * 60 + 59) hora8h = hhmm(m8);
     }
     return { minuts: mins, treballant: obert !== null && !noTreballa, enPausa: ultim === 'Inici pausa', pausaDes: iniciPausa,
@@ -476,7 +476,7 @@
       .then(function () { enviant = false; pinta(); }, function () { enviant = false; pinta(); });
   }
 
-  // Començar: si algun dia anterior es va oblidar de fitxar la sortida, es proposa tancar-lo a 8 hores.
+  // Començar: si algun dia anterior es va oblidar de fitxar la sortida, es proposa tancar-lo a la jornada del conveni (7 h 39 min).
   function comenca() {
     var ajusta = [];
     var llista = (E.ajustables || []).slice();
@@ -484,8 +484,8 @@
       if (!llista.length) return fitxa('Entrada', { ajusta: ajusta });
       var a = llista.shift();
       var ahir = a.data === isoMes(E.avui, -1);
-      pregunta('Sembla que ' + (ahir ? 'ahir' : 'el ' + diaSetmana(a.data).toLowerCase()) + ' et vas oblidar de fitxar la sortida.\n\nVols que ajustem la jornada a ' +
-        E.horesJornada + ' hores (sortida a les ' + a.sortida + ')?', 'Sí, ajusta-la', 'No').then(function (si) {
+      pregunta((ahir ? 'Ahir' : 'El ' + diaSetmana(a.data).toLowerCase()) + ' no vas fitxar la sortida.\n\nSi vols, t\'ho deixem fet amb la jornada habitual del conveni (sortida a les ' +
+        a.sortida + ').', 'Sí, gràcies', 'No, ja ho miraré').then(function (si) {
         if (si) ajusta.push(a.data);
         seguent();
       });
@@ -499,8 +499,8 @@
 
   function acaba(j) {
     if (j.minuts >= E.minutsAvis && j.hora8h) {
-      return pregunta('Sembla que t\'has oblidat de fitxar la pausa. Vols que ho ajustem automàticament?\n\n(La jornada quedarà en ' +
-        E.horesJornada + ' hores, amb sortida a les ' + j.hora8h + '.)', 'Sí, ajusta-la', 'No').then(function (si) {
+      return pregunta('Sembla que avui no has pogut fitxar la pausa.\n\nSi vols, t\'ajustem la jornada a l\'horari habitual del conveni (sortida a les ' +
+        j.hora8h + ').', 'Sí, gràcies', 'No, està bé així').then(function (si) {
         if (si) return fitxa('Sortida', { ajust8h: true, hora: j.hora8h });
         preguntaAcabar();
       });
