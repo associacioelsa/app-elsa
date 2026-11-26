@@ -1,0 +1,18 @@
+{
+  "id": "prototip.html",
+  "name": "Elsa · Prototip",
+  "short_name": "Prototip",
+  "description": "Banc de proves de l'app dels conductors (no desa res)",
+  "lang": "ca",
+  "start_url": "prototip.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000046",
+  "theme_color": "#000046",
+  "icons": [
+    { "src": "icona-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

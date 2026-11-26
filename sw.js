@@ -1,8 +1,8 @@
 // Guarda al mòbil els fitxers de la pantalla (no les dades) perquè l'app s'obri més de pressa.
 // Cada vegada que es publica una versió nova, cal canviar el número de VERSIO.
-const VERSIO = 'elsa-v11';
+const VERSIO = 'elsa-v12';
 const FITXERS = ['./', 'index.html', 'estil.css', 'app.js', 'config.js', 'escena.svg',
-  'icona-192.png', 'manifest.json', 'prototip.html', 'prototip.js'];
+  'icona-192.png', 'manifest.json', 'prototip.html', 'prototip.js', 'manifest-prototip.json'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(VERSIO).then(function (c) { return c.addAll(FITXERS); }));
