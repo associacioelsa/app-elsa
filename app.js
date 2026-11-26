@@ -340,7 +340,7 @@
   function obreMeusFitxatges() {
     var pa = document.getElementById('panell'); pa.innerHTML = '';
     pa.appendChild(el('h3', null, 'Els meus fitxatges'));
-    pa.appendChild(el('div', 'sub', 'Si t\'has equivocat, toca «Canvia l\'hora». Pots corregir fins a ' + (E.diesCorregir || 7) + ' dies enrere.'));
+    pa.appendChild(el('div', 'sub', 'Si t\'has equivocat, toca «Canvia l\'hora». Pots corregir avui i l\'últim dia de feina; per a dies anteriors, truca a l\'oficina.'));
     var dies = [{ data: E.avui, fets: E.jornada.fets.filter(function (f) { return f.id !== 'provisional'; }) }].concat(E.recents || []);
     dies.forEach(function (d) {
       if (!d.fets.length) return;
